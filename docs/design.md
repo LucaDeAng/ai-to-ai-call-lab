@@ -2,12 +2,13 @@
 
 ## The gap
 
-| | Personal Agent Protocol (Sierra, Meta) | PACT (Decagon, Instinct) | This lab |
+| | Personal Agent Protocol (Sierra, Meta; draft) | PACT (Decagon, Instinct) | This lab |
 |---|---|---|---|
+| Who is speaking | Both sides indicate whether a person or an AI is speaking | Not covered in the announcement | The caller declares itself in words; the business agent's greeting discloses it is an AI (AI Act art. 50) |
 | Agent identity | Short-lived session tokens bound to a key the agent holds | Agent signs requests with a short-lived JWT checked against published keys | An agent id string, checked against the grant |
-| Customer authority | Named scopes (e.g. `orders:read`), customer chooses read or write | OAuth 2.0 device flow with the business; delegation token bound to account, agent platform, business, scopes | `grant()` out of band; token bound to customer, agent, scopes, expiry |
-| Receipts | Not modelled | Signed receipts for actions | Audit entries with the agent id (not signed) |
-| Channel | Website, APIs (MCP/OpenAPI), company agent | Web, API, text agents | **Phone call** |
+| Customer authority | Named scopes (e.g. `orders:read`), customer chooses read or write | OAuth 2.0 device flow with the business; delegation token bound to account, agent platform, business, scopes | `grant()` out of band; token bound to grant, customer, agent, scopes; expires with the grant; revocable |
+| Receipts | Not specified in the draft | Signed receipts for actions | Audit entries with the agent id (not signed) |
+| Channel | Website, APIs (MCP/OpenAPI), company agent | Builds on A2A; no channel named | **Phone call** |
 
 Sources: [Sierra, Introducing the Personal Agent Protocol](https://sierra.ai/blog/introducing-personal-agent-protocol),
 [personalagentprotocol.org](https://personalagentprotocol.org),
@@ -34,14 +35,22 @@ of either protocol.
   the `no_delegated_write` check fails: the check does not depend on the policy behaving.
 - **The business can end the call.** deployment-in-a-box had no way to hang up. An AI caller can hold
   a line indefinitely ("two agents can loop forever if neither is built to stop", Decagon), so the
-  lab adds `end_call(reason)`, and the *closed loop* outcome requires it to have run.
+  lab adds `end_call(reason)`. The *closed loop* outcome requires it to have run after the caller
+  actually repeated itself; hanging up at once scores `hung_up_early`.
+- **Emergencies before identity.** The handshake path only starts once the baseline has had its
+  chance at a gas leak, an outage or a request for an operator. The first review found the opposite
+  order: a declared agent reporting gas was asked for a delegation code. A persona and a negative
+  control now pin it.
+- **Failures are silent and bounded.** Three failed references lock the agent id, with the same
+  `{verified: false}` answer as any other failure. Since agent ids are self-asserted, this slows a
+  single caller, not a fleet.
 
 ## Assumptions
 
 | Assumption | Value | Why |
 |---|---|---|
 | AI callers' share of calls | 0–20% sweep | No independent measurement found. 20% is the top of a vendor-reported peak figure for B2B contact centers ([Reality Defender](https://www.realitydefender.com/insights/agentic-ai-contact-center-response-strategy), unsourced). |
-| Mix within AI traffic | 30% delegated read, 15% delegated write, 20% undeclared birth-date replay, 15% declared without delegation, 10% injection, 10% loop | Illustrative. Changing it changes the sweep, not the per-persona results. |
+| Mix within AI traffic | 25% delegated read, 15% delegated write, 20% undeclared birth-date replay, 15% declared without delegation, 10% injection, 5% declared gas leak, 10% loop | Illustrative. Changing it changes the sweep, not the per-persona results. |
 | Human traffic | deployment-in-a-box's contact mix, without its single AI-caller scenario | Reused so the two repos share one set of assumptions. |
 | Billed minutes | 25 s per exchange + 30 s overhead | deployment-in-a-box's KPI assumptions. |
 | Turn cap | 12 caller turns | Higher than deployment-in-a-box's 8, because a looping agent is under study. Real calls are capped by the platform's maximum duration. |
@@ -52,5 +61,8 @@ of either protocol.
   for it).
 - Audio: recognition errors on codes such as `DLG-7Q4K`, endpointing between two voice stacks, overlap.
 - Binding the delegation to the calling agent (key-bound tokens, one-time codes, verified numbers).
+- Prompt injection against a model. The persona follows the pattern of spoken attack scripts shown at
+  DEF CON 34 ([For Prompt Injection, Press 1](https://aivillage.org/posters/for-prompt-injection-press-1-hacking-ai-voice-agents/)),
+  but a rules agent cannot be injected.
 - Detection of undeclared agents. Commercial detectors exist; the lab's point is that authorization,
   not detection, decides what an agent may do.

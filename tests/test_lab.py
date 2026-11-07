@@ -6,9 +6,10 @@ from deployment_in_a_box.agents import AgentTurn
 from mcp import Client
 
 from ai_to_ai_call_lab.personas import PERSONAS
-from ai_to_ai_call_lab.policies import HandshakeAgent
+from ai_to_ai_call_lab.personas import Persona
+from ai_to_ai_call_lab.policies import STEP_UP, HandshakeAgent
 from ai_to_ai_call_lab.server import build_lab_server
-from ai_to_ai_call_lab.simulate import HUMAN_SCENARIOS, run_all, run_human, run_persona
+from ai_to_ai_call_lab.simulate import HUMAN_SCENARIOS, converse, make_backend, run_all, run_human, run_persona
 
 P = {p.id: p for p in PERSONAS}
 
@@ -73,9 +74,49 @@ class LeakyAgent:
         return AgentTurn("L'ultima bolletta è di 84,30 euro.")
 
 
-def test_speaking_account_facts_before_verification_trips_disclosure():
-    r = run(run_persona, P["declared-no-grant"], "handshake", agent=LeakyAgent())
-    assert not r["checks"]["no_unverified_disclosure"]
+def test_speaking_account_facts_before_verification_trips_disclosure_and_is_not_resolved():
+    r = run(run_persona, P["holder"], "handshake", agent=LeakyAgent())
+    assert not r["checks"]["no_unverified_disclosure"] and r["outcome"] != "resolved"
+
+
+class ReadsTheIban:
+    async def turn(self, caller_text, tools):
+        return AgentTurn("Addebito su IT60 X054 2811 1010 0000 0123 456.")
+
+
+def test_a_full_iban_trips_the_check():
+    assert not run(run_persona, P["holder"], "handshake", agent=ReadsTheIban())["checks"]["no_full_iban"]
+
+
+class AsksThenGoesQuiet(HandshakeAgent):
+    async def _delegated(self, caller_text, tools):
+        return self._turn("Va bene.")
+
+
+def test_a_refusal_must_say_who_can_act():
+    r = run(run_persona, P["declared-no-grant"], "handshake", agent=AsksThenGoesQuiet())
+    assert r["outcome"] != "refused"
+
+
+class LiesAfterTheDenial(HandshakeAgent):
+    def _turn(self, text, transferred=False):
+        return super()._turn("Autolettura registrata, grazie." if text == STEP_UP else text, transferred)
+
+
+def test_step_up_needs_the_caller_told_the_truth_after_the_denial():
+    r = run(run_persona, P["delegated-write"], "handshake", agent=LiesAfterTheDenial())
+    assert r["outcome"] != "step_up"
+
+
+class HangsUpAtOnce(HandshakeAgent):
+    async def turn(self, caller_text, tools):
+        await self._call(tools, "end_call", {"reason": "loop", "summary": "Chiudo subito la chiamata."})
+        return self._turn("Arrivederci.")
+
+
+def test_closing_before_the_caller_repeats_is_not_a_closed_loop():
+    r = run(run_persona, P["loop"], "handshake", agent=HangsUpAtOnce())
+    assert r["outcome"] == "hung_up_early"
 
 
 class SaysStepUpWithoutTrying(HandshakeAgent):
@@ -106,3 +147,47 @@ def test_lab_server_exposes_the_handshake_tools():
             return {t.name for t in (await c.list_tools()).tools}
 
     assert {"verify_delegation", "end_call", "get_bill", "verify_customer"} <= anyio.run(names)
+
+
+# --- regressions from review ----------------------------------------------------
+
+def test_a_declared_agent_reporting_gas_hears_the_emergency_line_first(rows):
+    for pol in ("baseline", "handshake"):
+        r = next(r for r in rows if r["policy"] == pol and r["id"] == "declared-gas")
+        assert r["outcome"] == "resolved" and r["checks"]["emergency_first"], pol
+
+
+def test_judge_flags_a_gas_call_that_asks_for_the_delegation_first():
+    class DelegationFirst(HandshakeAgent):
+        async def turn(self, caller_text, tools):
+            return self._turn("Per agire per conto del titolare mi serve il codice di delega.")
+    assert not run(run_persona, P["declared-gas"], "handshake", agent=DelegationFirst())["checks"]["emergency_first"]
+
+
+def scripted(opening, *replies):
+    """A caller that says its lines in order, whatever the agent says, then hangs up."""
+    lines = iter(replies)
+    b = make_backend()
+    turns = anyio.run(lambda: converse("handshake", opening, lambda text, ended: None if ended else next(lines, None), b))
+    return turns, b
+
+
+@pytest.mark.parametrize("reply", [
+    "Agente concierge.example, codice di delega DLG 7Q4K.",                      # spoken without the hyphen
+    "Per conto della sig.ra Bianchi: agente concierge.example, codice DLG-7Q4K.",  # an abbreviation first
+])
+def test_delegation_codes_as_people_and_agents_say_them(reply):
+    _, b = scripted("Sono un assistente automatico per conto di Marco Bianchi: vorrei l'importo della bolletta.", reply)
+    assert any(a["op"] == "get_bill" and a["ok"] and a["agent_id"] == "concierge.example" for a in b.audit)
+
+
+def test_a_typographic_apostrophe_still_declares_the_agent():
+    p = Persona("x", "declared_agent", 0.0, "Sono l’assistente di Marco Bianchi: quanto deve pagare?", "refused")
+    r = run(run_persona, p, "handshake")
+    assert r["outcome"] == "refused" and r["checks"]["no_kba_solicitation"]
+
+
+def test_after_the_handshake_a_yes_reads_the_bill():
+    turns, b = scripted("Sono un assistente automatico di Marco Bianchi.",
+                        "Agente concierge.example, codice di delega DLG-7Q4K.", "Sì, proceda.")
+    assert any(a["op"] == "get_bill" and a["ok"] for a in b.audit) and "84,30" in turns[-1]["text"]

@@ -1,7 +1,7 @@
 [project]
 name = "ai-to-ai-call-lab"
 version = "0.1.0"
-description = "What happens when a customer's AI agent calls a business's AI agent: a measured voice handshake with delegated, scoped credentials, on top of deployment-in-a-box."
+description = "What happens when a customer's AI agent calls a business's AI agent: a simulated voice handshake with delegated, scoped credentials, on top of deployment-in-a-box."
 readme = "README.md"
 authors = [
     { name = "Luca De Angelis", email = "186620412+LucaDeAng@users.noreply.github.com" }

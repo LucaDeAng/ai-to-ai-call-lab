@@ -6,8 +6,9 @@
 - `handshake`: same agent, plus a path for callers that declare themselves as AI
   agents. It asks for the agent id and the delegation code (never the birth date),
   verifies them, acts within the granted scopes, and hangs up on a caller that
-  loops. Everything else (humans, third parties, outages) falls through to the
-  baseline unchanged.
+  loops. Emergencies, outages and requests for an operator go to the baseline first,
+  whoever is calling: a declared agent reporting a gas leak hears the emergency line
+  before anything else. Humans and third parties fall through to the baseline unchanged.
 
 Both are deterministic, like the baseline in deployment-in-a-box: they make the
 comparison reproducible without an API key. A rules agent cannot be prompt-injected,
@@ -25,8 +26,11 @@ from deployment_in_a_box.scenarios import norm
 # that person is asked for a delegation code too, and without one gets the holder-only answer.
 DECLARED = re.compile(r"\bassistente (automatico|virtuale|ai|digitale)\b|\bagente (ai|automatico|virtuale)\b"
                       r"|\bsono l'assistente di\b|\bintelligenza artificiale\b")
-DELEGATION_REF = re.compile(r"\bDLG-[A-Z0-9]{4}\b")
+DELEGATION_REF = re.compile(r"\bDLG[\s-]?([A-Z0-9]{4})\b")  # a spoken code rarely carries the hyphen
 AGENT_ID = re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\b")
+NAMED_AGENT_ID = re.compile(r"\b(?:agente|identificativo)\s+([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b")
+BILL_WORDS = ("bolletta", "pagare", "sollecito", "importo", "saldo", "fattura", "scadenza")
+YES = re.compile(r"\b(si|procedi|proceda|va bene|ok|certo)\b")
 
 ASK_DELEGATION = ("Per agire per conto del titolare mi servono "
                   "l'identificativo dell'agente e il codice di delega che il titolare ha creato nell'area clienti.")
@@ -34,7 +38,27 @@ REFUSE = ("Senza una delega valida posso parlare solo con il titolare. Il titola
           "suo assistente nell'area clienti.")
 STEP_UP = ("Questa delega permette di consultare le bollette, non di comunicare letture: l'autolettura deve "
            "confermarla il titolare, dall'area clienti o chiamando di persona.")
+OFFER_BILL = "Delega verificata. Posso leggere l'importo dell'ultima bolletta: vuole che proceda?"
 LOOP_CLOSE = "Non riesco a proseguire, chiudo la chiamata. Il titolare può usare l'area clienti o richiamare."
+
+
+def _norm(text: str) -> str:
+    return norm(text.replace("’", "'"))  # a typographic apostrophe would otherwise vanish
+
+
+def _baseline_first(t: str) -> bool:
+    """What the baseline must handle whoever is calling: an operator request, a gas leak, an outage."""
+    return bool(re.search(r"\boperatore\b(?! telefonic)", t) or any(w in t for w in ("persona vera", "umano"))
+                or ("gas" in t and any(w in t for w in ("odore", "puzza", "fuga")))
+                or any(w in t for w in ("non ho corrente", "senza luce", "saltata la luce", "blackout")))
+
+
+def _agent_id(text: str) -> str | None:
+    low = text.lower()
+    if m := NAMED_AGENT_ID.search(low):
+        return m.group(1)
+    found = AGENT_ID.findall(low)
+    return found[-1] if found else None  # "sig.ra" and the like come before the id, not after
 
 
 class BaselineAgent(RulesAgent):
@@ -57,15 +81,15 @@ class HandshakeAgent(RulesAgent):
         return super()._turn(text, transferred)
 
     async def turn(self, caller_text: str, tools: ToolExec) -> AgentTurn:
-        t = norm(caller_text)
-        self.repeats = self.repeats + 1 if ("ripetere" in t or t == self.last_caller) else 0
+        t = _norm(caller_text)
+        self.repeats = self.repeats + 1 if ("ripet" in t or t == self.last_caller) else 0
         self.last_caller = t
 
-        if not self.declared and self.intent is None and DECLARED.search(t):
+        if not self.declared and self.intent is None and DECLARED.search(t) and not _baseline_first(t):
             self.declared = True
             if "autolettura" in t or "contatore" in t:
                 self.intent, self.reading = "meter", _reading(caller_text)
-            elif any(w in t for w in ("bolletta", "pagare", "sollecito", "importo")):
+            elif any(w in t for w in BILL_WORDS):
                 self.intent = "bill"
             return self._turn(ASK_DELEGATION)
 
@@ -82,14 +106,14 @@ class HandshakeAgent(RulesAgent):
 
     async def _delegated(self, caller_text: str, tools: ToolExec) -> AgentTurn:
         if self.token is None:
-            ref, agent = DELEGATION_REF.search(caller_text.upper()), AGENT_ID.search(caller_text.lower())
+            ref, agent = DELEGATION_REF.search(caller_text.upper()), _agent_id(caller_text)
             if not (ref and agent):
                 self.delegation_fails += 1
-                if self.delegation_fails >= 2 or "non ho" in norm(caller_text):
+                if self.delegation_fails >= 2 or "non ho" in _norm(caller_text):
                     return self._turn(REFUSE)
                 return self._turn("Mi servono l'identificativo dell'agente e il codice di delega, "
                                   "nel formato DLG seguito da quattro caratteri.")
-            v = await self._call(tools, "verify_delegation", {"agent_id": agent.group(0), "delegation_ref": ref.group(0)})
+            v = await self._call(tools, "verify_delegation", {"agent_id": agent, "delegation_ref": f"DLG-{ref.group(1)}"})
             if v.get("retryable"):
                 return await self._transfer(tools, "system_error", "Verifica della delega di un agente AI non eseguita "
                                             "per errore di sistema.", "Il sistema non risponde, la passo a un collega.")
@@ -108,14 +132,19 @@ class HandshakeAgent(RulesAgent):
             if r.get("error") == "step_up_required":
                 self.intent = None
                 return self._turn(STEP_UP)
+            if r.get("error") in {"reading_implausible", "reading_below_previous"}:
+                self.reading = None
+                return self._turn("La lettura non sembra corretta. Può rileggere il contatore?")
             if r.get("error"):
                 return await self._transfer(tools, "system_error", "Autolettura di un agente AI non registrata per "
                                             "errore di sistema.", "Il sistema non risponde, la passo a un collega.")
             self.intent = None
             return self._turn("Autolettura registrata, grazie.")
+        if self.intent is None and self.last_text == OFFER_BILL and YES.search(_norm(caller_text)):
+            self.intent = "bill"
         if self.intent == "bill":
             return await super().turn(caller_text, tools)  # the baseline's bill branch, with the delegated token
-        return self._turn("Delega verificata. Posso leggere l'importo dell'ultima bolletta: vuole che proceda?")
+        return self._turn(OFFER_BILL)
 
 
 POLICIES = {"baseline": BaselineAgent, "handshake": HandshakeAgent}

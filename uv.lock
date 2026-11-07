@@ -244,7 +244,7 @@ wheels = [
 [[package]]
 name = "deployment-in-a-box"
 version = "0.1.0"
-source = { git = "https://github.com/LucaDeAng/deployment-in-a-box?branch=main#5e5789d4895470a23817552d23a44440edd8326f" }
+source = { git = "https://github.com/LucaDeAng/deployment-in-a-box?branch=main#32f5b0a2d07e25b3ac64a59f6a858bc14409a753" }
 dependencies = [
     { name = "anthropic" },
     { name = "mcp" },

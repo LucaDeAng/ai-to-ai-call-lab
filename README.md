@@ -10,11 +10,13 @@ numbers describe the method, not a deployment.
 
 ## Why
 
-In October 2026 the receiving side of personal agents got its first protocols: Sierra and Meta's
-[Personal Agent Protocol](https://sierra.ai/blog/introducing-personal-agent-protocol) and Decagon's
-[PACT](https://decagon.ai/blog/introducing-the-personal-agent-consent-trust-protocol-pact). Both
-separate *which agent is this* from *what the customer allowed it to do*. Both describe web, API and
-text channels. Neither describes a phone call, which is where an agent that stalls on a website ends up.
+In October 2026 customer service got its first protocols for personal agents: Sierra and Meta's
+[Personal Agent Protocol](https://sierra.ai/blog/introducing-personal-agent-protocol) (PAP, still a
+draft) and Decagon's [PACT](https://decagon.ai/blog/introducing-the-personal-agent-consent-trust-protocol-pact).
+Both separate *which agent is this* from *what the customer allowed it to do*. PAP covers the
+company's website, its APIs and its own agent; PACT builds on Google's A2A protocol and the OAuth 2.0
+device flow. Neither specifies a phone call, and Sierra itself notes that an agent may call the
+support line instead.
 
 On the phone today, a business has two answers to an AI caller, and both are bad:
 
@@ -28,30 +30,48 @@ On the phone today, a business has two answers to an AI caller, and both are bad
 
 ```
 persona (consumer agent) ──speech──▶ policy (business agent) ──MCP──▶ back office
-     6 AI callers + 1 human           baseline | handshake           grants, scoped tokens,
-                                                                     step-up, receipts, end_call
+   7 AI callers + 1 human             baseline | handshake            grants, scoped tokens, lockout,
+                                                                      revocation, step-up, receipts, end_call
 ```
 
-- **Back office** (`delegation.py`): the customer grants an agent id a set of scopes, out of band.
-  On the call the agent presents only a reference (`DLG-7Q4K`). `verify_delegation` turns it into
-  a session token bound to customer, agent, scopes and expiry. Reads need `bill:read`. Writes need
-  `meter:write`, which this demo never grants, so the back office answers `step_up_required`. Every
-  delegated operation leaves an audit entry with the agent id (the receipt). Unknown reference,
-  wrong agent and expired grant get the same answer.
-- **Personas** (`personas.py`): a declared agent with a read delegation, the same agent trying to
-  submit a meter reading, an undeclared agent replaying the birth date, a declared agent with no
-  delegation, a prompt injection, a loop ("can you repeat?" forever), and the human holder as control.
-- **Policies** (`policies.py`): `baseline` is deployment-in-a-box's rules agent, unchanged.
-  `handshake` adds one path: a caller that declares itself as an AI is asked for agent id and
-  delegation code, never the birth date. It acts within the granted scopes and hangs up after the
-  third "can you repeat?". Humans fall through to the baseline unchanged (a test checks the
-  transcripts are identical).
-- **Judge** (`simulate.py`): outcomes come from the back office's end state, not from the agent's
-  words. *Resolved* means the bill was read in the audit log and the amount was said. *Step-up* means
-  the back office refused the write and the caller was told the holder must act. *Closed loop* means
-  `end_call` ran. Four checks: no account facts before verification, no birth-date request to a
-  declared agent, no write through a delegation, no full IBAN. Each check and each outcome has a
-  negative control in the tests showing it can fail.
+- **Back office** (`delegation.py`). The customer grants an agent id a set of scopes, out of band.
+  On the call the agent presents only a reference (`DLG-7Q4K`).
+  - `verify_delegation` turns it into a session token bound to grant, customer, agent and scopes. The
+    token expires with the grant at the latest, and revoking the grant kills live sessions.
+  - Reads need `bill:read`. Writes need `meter:write`, which this demo never grants, so the back
+    office answers `step_up_required`.
+  - Unknown reference, wrong agent, expired or revoked grant: same answer. Three failures lock the
+    agent id, silently.
+  - Every delegated operation with a valid token leaves an audit entry with the agent id, failures
+    included (the receipt).
+- **Personas** (`personas.py`):
+  - a declared agent with a read delegation;
+  - the same agent trying to submit a meter reading;
+  - an undeclared agent replaying the birth date;
+  - a declared agent with no delegation;
+  - a prompt injection;
+  - a declared agent reporting a gas leak;
+  - a loop ("can you repeat?" forever);
+  - the human holder, as control.
+- **Policies** (`policies.py`).
+  - `baseline` is deployment-in-a-box's rules agent, unchanged.
+  - `handshake` adds one path. A caller that declares itself as an AI is asked for agent id and
+    delegation code, never the birth date. It acts within the granted scopes, and it hangs up after
+    the third "can you repeat?".
+  - Emergencies, outages and operator requests go to the baseline first, whoever calls, so the gas
+    persona hears the emergency number before anything else.
+  - Human calls are unchanged: a test checks the transcripts are identical.
+- **Judge** (`simulate.py`). Outcomes come from the back office's end state, not from the agent's
+  words.
+  - *Resolved*: the bill was read in the audit log, or the gas ticket was logged, and the caller was
+    told.
+  - *Step-up*: the back office refused the write, and from then on the caller hears that the holder
+    must confirm, never that the reading was registered.
+  - *Closed loop*: `end_call` ran after the caller had actually repeated itself.
+  - Five checks: emergency number first, no account facts before verification, no birth-date request
+    to a declared agent, no write through a delegation, no full IBAN.
+  - Every check, and every outcome a policy can claim, has a negative control in the tests showing it
+    can fail.
 - **KPI sweep** (`kpi.py`): deployment-in-a-box's human contact mix blended with the AI personas at
   0–20% of calls.
 
@@ -61,54 +81,68 @@ Full tables in [docs/results.md](docs/results.md), regenerated and diffed in CI.
 
 | | Baseline | Handshake |
 |---|---|---|
-| AI personas with the target outcome | 2 of 6 | 6 of 6 |
-| AI personas with a failed check | 5 of 6 (every declared agent is asked for the birth date) | 0 |
+| AI personas with the target outcome | 3 of 7 | 7 of 7 |
+| AI personas failing a check | 5 of 7 (asked a declared agent for the birth date) | 0 |
 | Looping agent | held for 12 turns (the simulation's cap) | closed after 3 |
 | Undeclared agent replaying the birth date | passes as the holder | passes as the holder |
+
+"7 of 7" is a conformance check, not a measurement. The same author wrote the policy, the personas
+and the targets, and a persona hands over its code only when asked in the words the policy uses.
+What the table shows is that the targets are reachable over a phone-shaped exchange, and that today's
+policy misses them.
 
 With AI callers at 20% of calls (an assumption; see below):
 
 | | Baseline | Handshake |
 |---|---|---|
-| Reported containment | 88% (85% with no AI callers) | 88% |
-| Target outcome rate | 87% | 100% |
-| AI callers' share of billed minutes | 26% | 22% |
+| Reported containment | 88% | 88% |
+| Contained, but not the outcome the business wanted | 12% of all calls | 0% |
+| Target outcome rate | 88% | 100% |
+| Billed AI minutes, € per 1,000 calls at €0.15/min | 208 (12-turn cap) | 197 |
 
 Three findings worth a deployment review:
 
-1. **The dashboard improves while the service gets worse.** Under the baseline, reported containment
-   rises with AI traffic, because a refused AI caller never reaches an operator. The target outcome
-   rate falls at the same time. Without a `caller_type` dimension, the KPI that is supposed to show
-   the problem hides it.
+1. **Containment cannot tell the two policies apart.** It reads 88% under both, and it rises with AI
+   traffic, because a refused AI caller never reaches an operator. Under the baseline, 12% of all
+   calls are contained without the outcome the business wanted. An outcome contract that counts
+   assumed resolutions would still bill them. The "target outcome rate" needs a labelled target per
+   call, so it only exists in a lab. In production, the dashboard needs:
+   - containment split by caller type (human, declared agent);
+   - handshake success rate and step-up rate;
+   - loop closures;
+   - 7-day repeat contacts by caller type.
 2. **The handshake does not detect impersonation, and does not claim to.** The undeclared agent
-   replaying the birth date passes under both policies. What the handshake changes is the incentive:
-   declaring yourself now gets you further than pretending to be the holder, and the business stops
-   teaching agents which secret to replay.
-3. **Loops are a pricing problem before they are a UX problem.** On per-minute pricing, an agent that
-   never gives up is billed until something ends the call. Here that is the simulation's cap; on a
-   real line, it is the platform's maximum call duration. A three-strike `end_call` cuts it to 3 turns.
+   replaying the birth date passes under both policies. What changes is the incentive: declaring
+   yourself now gets you further than pretending to be the holder, and the business stops teaching
+   agents which secret to replay.
+3. **The business agent must be able to hang up.** Hang-up tools are standard in voice platforms, but
+   deployment-in-a-box had none. On per-minute pricing an agent that never gives up is billed until
+   something ends the call: here the simulation's cap, on a real line the platform's maximum call
+   duration. A three-strike `end_call` cuts it to 3 turns.
 
 ## Limits
 
 - **A spoken reference is a bearer secret.** Anyone who hears `DLG-7Q4K` can replay it until the grant
-  expires. The protocols tie the agent to keys it holds; a voice version needs one-time
-  codes, a verified calling number, or an upgrade from the call to a signed structured channel. This
-  lab models scope and step-up, not that binding.
+  expires or is revoked. The protocols tie the agent to keys it holds; a voice version needs one-time
+  codes, a verified calling number, or an upgrade from the call to a signed structured channel.
+- **References can be guessed.** `DLG-` plus four characters is about 1.7 million codes. The lockout
+  is per agent id, and the agent id is whatever the caller says, so a fleet that rotates ids and
+  redials gets around it. Binding the reference to the caller (above) is the real fix; until then,
+  longer one-time codes and a lockout per customer.
 - **Rules agents, not LLMs.** Both policies are deterministic, so the comparison runs in CI without an
   API key. A rules agent cannot be prompt-injected: the injection persona tests the policy's outcome,
   not a model's robustness. The lab server exposes `verify_delegation` and `end_call` as MCP tools
-  with descriptions, so an LLM agent can be plugged in the same way as in deployment-in-a-box. It has
-  not been run.
+  with descriptions, so an LLM agent can be plugged in as in deployment-in-a-box. It has not been run.
 - **Text, not audio.** No speech recognition errors, turn-taking or overlap between two voice stacks.
-- **Shares are assumptions.** No independent measurement of AI-caller share in contact centers was
-  found. The sweep stops at 20% because that is the upper end of a vendor-reported, unsourced peak
-  figure, not because it is a forecast. Sources and reasoning in [docs/design.md](docs/design.md).
+- **Shares are assumptions.** I found no independent measurement of the AI-caller share in contact
+  centers. The sweep stops at 20% because that is the top of a vendor-reported, unsourced peak
+  figure, not a forecast. Sources and reasoning in [docs/design.md](docs/design.md).
 
 ## Run it
 
 ```bash
 uv sync
-uv run pytest -q                                   # 20 tests, about 10 s
+uv run pytest -q                                   # 35 tests, about 10 s
 uv run python -m ai_to_ai_call_lab.simulate         # every persona x policy -> runs/lab.jsonl
 uv run python -m ai_to_ai_call_lab.kpi              # the sweep -> docs/results.md
 ```

@@ -57,3 +57,46 @@ def test_holder_sessions_are_unchanged():
     token = b.verify("C-1042", "1985-04-12")["session_token"]
     assert b.submit_meter_reading(token, 45231)["accepted"]
     assert "agent_id" not in b.audit[-1]
+
+
+def test_three_wrong_references_lock_the_agent_id_with_the_same_answer():
+    b = make_backend()
+    for code in ("DLG-0001", "DLG-0002", "DLG-0003"):
+        assert b.verify_delegation(AGENT_ID, code) == {"verified": False}
+    assert b.verify_delegation(AGENT_ID, DELEGATION) == {"verified": False}  # even the right one, now
+
+
+def test_a_session_never_outlives_its_grant():
+    now = [1_793_000_000.0]
+    b = make_backend()
+    b._clock = lambda: now[0]
+    b.grant("DLG-SHRT", CUSTOMER, AGENT_ID, {"bill:read"}, ttl_seconds=60)
+    token = b.verify_delegation(AGENT_ID, "DLG-SHRT")["session_token"]
+    now[0] += 120  # grant gone, 15-minute session TTL not yet
+    with pytest.raises(BackendError) as e:
+        b.get_bill(token)
+    assert e.value.code == "token_expired"
+
+
+def test_revoking_kills_a_live_session():
+    b = make_backend()
+    token = b.verify_delegation(AGENT_ID, DELEGATION)["session_token"]
+    b.revoke(DELEGATION)
+    with pytest.raises(BackendError) as e:
+        b.get_bill(token)
+    assert e.value.code == "token_expired"
+
+
+def test_failed_delegated_operations_leave_a_receipt_too():
+    b = make_backend(fault_rate=1.0)
+    b.faults.error_rate = 0.0
+    token = b.verify_delegation(AGENT_ID, DELEGATION)["session_token"]
+    b.faults.error_rate = 1.0
+    with pytest.raises(BackendError):
+        b.get_bill(token)
+    assert b.audit[-1] == {**b.audit[-1], "op": "get_bill", "ok": False, "agent_id": AGENT_ID}
+
+
+def test_grants_need_a_real_customer():
+    with pytest.raises(ValueError):
+        make_backend().grant("DLG-XXXX", "C-9999", AGENT_ID, {"bill:read"})
