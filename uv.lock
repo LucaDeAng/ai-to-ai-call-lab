@@ -12,6 +12,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "deployment-in-a-box" },
+    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -20,7 +21,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "deployment-in-a-box", git = "https://github.com/LucaDeAng/deployment-in-a-box?branch=main" }]
+requires-dist = [
+    { name = "deployment-in-a-box", git = "https://github.com/LucaDeAng/deployment-in-a-box?branch=main" },
+    { name = "pyyaml", specifier = ">=6" },
+]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=9.2.0" }]

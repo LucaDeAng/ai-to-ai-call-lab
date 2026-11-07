@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "deployment-in-a-box",
+    "pyyaml>=6",
 ]
 
 [tool.uv.sources]

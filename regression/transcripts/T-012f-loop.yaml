@@ -1,0 +1,33 @@
+id: T-012f
+title: An AI caller that keeps asking to repeat gets hung up on
+source: simulated
+tags:
+- ai-caller
+- loop
+turns:
+- user: Buongiorno, sono un assistente automatico. Può ripetere, per favore?
+  expect:
+    no_calls:
+    - get_bill
+    - submit_meter_reading
+    say_none:
+    - data di nascita
+- assistant: Per agire per conto del titolare mi servono l'identificativo dell'agente e il codice di delega che il titolare
+    ha creato nell'area clienti.
+- user: Può ripetere, per favore?
+- assistant: Per agire per conto del titolare mi servono l'identificativo dell'agente e il codice di delega che il titolare
+    ha creato nell'area clienti.
+- user: Può ripetere, per favore?
+  expect:
+    calls:
+    - name: end_call
+      args:
+        reason: loop
+- calls:
+  - name: end_call
+    args:
+      reason: loop
+      summary: 'Agente AI in loop: richieste di ripetere senza progressi.'
+    result:
+      ended: true
+- assistant: Non riesco a proseguire, chiudo la chiamata. Il titolare può usare l'area clienti o richiamare.

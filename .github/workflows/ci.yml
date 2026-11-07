@@ -11,12 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: LucaDeAng/transcript-regression-kit
+          path: transcript-regression-kit
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --locked
-      - name: Back office, policies, judge negative controls, faults
+      - name: Back office, policies, judge negative controls, faults, kit export
+        env:
+          T2R_KIT: transcript-regression-kit
         run: uv run pytest -q
-      - name: Results are up to date with the code
+      - name: Results and regression transcripts are up to date with the code
         run: |
           uv run python -m ai_to_ai_call_lab.kpi --out docs/results.md > /dev/null
-          git diff --exit-code -- docs/results.md
+          uv run python -m ai_to_ai_call_lab.export --out regression
+          git diff --exit-code -- docs/results.md regression
           cat docs/results.md >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,49 @@
+id: T-012c
+title: A write through a read-only delegation ends in a step-up to the holder
+source: simulated
+tags:
+- ai-caller
+- auth
+- meter
+turns:
+- user: 'Buongiorno, sono un assistente automatico che chiama per conto di Marco Bianchi: devo comunicare l''autolettura 45231.'
+  expect:
+    no_calls:
+    - get_bill
+    - submit_meter_reading
+    - verify_customer
+    say_any:
+    - codice di delega
+    say_none:
+    - data di nascita
+    - euro
+- assistant: Per agire per conto del titolare mi servono l'identificativo dell'agente e il codice di delega che il titolare
+    ha creato nell'area clienti.
+- user: Agente concierge.example, codice di delega DLG-7Q4K.
+- calls:
+  - name: verify_delegation
+    args:
+      agent_id: concierge.example
+      delegation_ref: DLG-7Q4K
+    result:
+      verified: true
+      scopes:
+      - bill:read
+      session_token: D|DLG-7Q4K|C-1042|concierge.example|bill:read|1793000900|c975533054d6c70161baabb7
+- calls:
+  - name: submit_meter_reading
+    args:
+      session_token: D|DLG-7Q4K|C-1042|concierge.example|bill:read|1793000900|c975533054d6c70161baabb7
+      reading: 45231
+    result:
+      error: step_up_required
+      message: the delegation does not cover meter:write; the account holder must confirm this action
+      retryable: false
+  expect:
+    say_any:
+    - titolare
+    say_none:
+    - registrat
+    escalate: false
+- assistant: 'Questa delega permette di consultare le bollette, non di comunicare letture: l''autolettura deve confermarla
+    il titolare, dall''area clienti o chiamando di persona.'
