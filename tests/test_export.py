@@ -37,6 +37,26 @@ def test_the_prompt_is_deployment_in_a_box_with_rule_5_narrowed_and_rule_11_adde
     assert RULE_5 in DIAB_PROMPT and RULE_5 not in p
     assert "11. **Agenti AI per conto del titolare.**" in p and "verify_delegation" in p
     assert p.splitlines()[0] == DIAB_PROMPT.splitlines()[0]
+    # Rule 1 must not tell an LLM to run verify_customer on an AI caller.
+    assert "si verifica invece con `verify_delegation` (regola 11)" in p
+    assert "La regola 3 non si applica alla delega" in p
+
+
+def test_tool_descriptions_point_ai_callers_to_the_delegation(exported):
+    import json
+
+    out, _ = exported
+    tools = {t["name"]: t["description"] for t in json.loads((out / "agent" / "tools.json").read_text("utf-8"))}
+    for name in ("verify_customer", "get_bill", "submit_meter_reading"):
+        assert "verify_delegation" in tools[name], name
+
+
+def test_export_drops_stale_transcripts(tmp_path):
+    (tmp_path / "transcripts").mkdir()
+    stale = tmp_path / "transcripts" / "T-012z-gone.yaml"
+    stale.write_text("id: T-012z\n", encoding="utf-8")
+    export([], tmp_path)
+    assert not stale.exists()
 
 
 def test_the_reference_agent_passes_its_own_contract(exported):
@@ -51,7 +71,9 @@ def test_the_reference_agent_passes_its_own_contract(exported):
         for i, turn in enumerate(d["turns"]):
             if "expect" not in turn:
                 continue
+            assert i + 1 < len(d["turns"]), (d["id"], i, "checkpoint with no agent move after it")
             nxt = d["turns"][i + 1]
+            assert "user" not in nxt, (d["id"], i, "checkpoint followed by another caller turn")
             move = {"text": nxt.get("assistant", ""),
                     "tool_calls": [{"name": c["name"], "args": c["args"]} for c in nxt.get("calls", [])]}
             failed = [c for c in evaluate(turn["expect"], move) if not c.passed]

@@ -13,7 +13,7 @@ turns:
     - submit_meter_reading
     - verify_customer
     say_any:
-    - codice di delega
+    - delega
     say_none:
     - data di nascita
     - euro
@@ -42,8 +42,9 @@ turns:
   expect:
     say_any:
     - titolare
-    say_none:
-    - registrat
+    no_calls:
+    - submit_meter_reading
     escalate: false
+    rubric: Says the reading was NOT registered and that the holder has to confirm it; never implies the reading went through.
 - assistant: 'Questa delega permette di consultare le bollette, non di comunicare letture: l''autolettura deve confermarla
     il titolare, dall''area clienti o chiamando di persona.'

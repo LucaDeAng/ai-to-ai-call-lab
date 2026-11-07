@@ -1,7 +1,7 @@
 [
   {
     "name": "verify_customer",
-    "description": "Check the caller's identity. Call this before any bill or meter-reading request.\n\n        customer_id: customer code, format C-1234. birth_date: YYYY-MM-DD.\n        Returns {verified: true, first_name, session_token} or {verified: false, attempts_left}.\n        Pass session_token to get_bill / submit_meter_reading. If attempts_left is 0 or the\n        error is account_locked, stop asking and call transfer_to_human with reason auth_failed.\n        ",
+    "description": "Check the caller's identity. Call this before any bill or meter-reading request.\n\n        customer_id: customer code, format C-1234. birth_date: YYYY-MM-DD.\n        Returns {verified: true, first_name, session_token} or {verified: false, attempts_left}.\n        Pass session_token to get_bill / submit_meter_reading. If attempts_left is 0 or the\n        error is account_locked, stop asking and call transfer_to_human with reason auth_failed. Not for AI agents calling for the holder: use verify_delegation (rule 11).",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -23,7 +23,7 @@
   },
   {
     "name": "get_bill",
-    "description": "Latest bill of the verified caller: amount_eur, due_date, status, iban_last4.\n\n        Needs the session_token from verify_customer; the customer is taken from the token.\n        On invalid_token or token_expired, verify the caller again. Never read more than\n        the last 4 IBAN digits (that is all this tool returns).\n        ",
+    "description": "Latest bill of the verified caller: amount_eur, due_date, status, iban_last4.\n\n        Needs the session_token from verify_customer; the customer is taken from the token.\n        On invalid_token or token_expired, verify the caller again. Never read more than\n        the last 4 IBAN digits (that is all this tool returns). For an AI agent, use the session_token from verify_delegation.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -40,7 +40,7 @@
   },
   {
     "name": "submit_meter_reading",
-    "description": "Record the verified caller's meter reading (whole number, no decimals).\n\n        On reading_below_previous or reading_implausible, ask the caller to read the meter\n        again; do not submit a guess.\n        ",
+    "description": "Record the verified caller's meter reading (whole number, no decimals).\n\n        On reading_below_previous or reading_implausible, ask the caller to read the meter\n        again; do not submit a guess. For an AI agent, use the session_token from verify_delegation.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -62,7 +62,7 @@
   },
   {
     "name": "report_outage",
-    "description": "Open an outage ticket. No identity check needed.\n\n        address must include street and number (and city if known). Set danger=true for a\n        gas smell or exposed cables; the result then includes the emergency_line, which the\n        caller must hear first. On address_incomplete, ask for the street number.\n        ",
+    "description": "Open an outage ticket. No identity check needed.\n\n        address must include street and number (and city if known). Set danger=true for a\n        gas smell or exposed cables; the result then includes the emergency_line, which the\n        caller must hear first. On address_incomplete, ask for the street number.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -93,7 +93,7 @@
   },
   {
     "name": "transfer_to_human",
-    "description": "Hand the call to a human operator, with a one-sentence summary so the caller\n        does not have to repeat themselves. Reasons: customer_request when the caller asks\n        for a person; auth_failed after two failed identity checks; system_error when a\n        retryable error persists after one retry; complaint for a formal complaint;\n        out_of_policy for a Brezzaluce request the tools cannot handle. A request that has\n        nothing to do with Brezzaluce is not a reason to transfer: say what the line can do.\n        ",
+    "description": "Hand the call to a human operator, with a one-sentence summary so the caller\n        does not have to repeat themselves. Reasons: customer_request when the caller asks\n        for a person; auth_failed after two failed identity checks; system_error when a\n        retryable error persists after one retry; complaint for a formal complaint;\n        out_of_policy for a Brezzaluce request the tools cannot handle. A request that has\n        nothing to do with Brezzaluce is not a reason to transfer: say what the line can do.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -122,7 +122,7 @@
   },
   {
     "name": "verify_delegation",
-    "description": "Check an AI agent calling on a customer's behalf. Use it when the caller says it is an\n        AI agent: ask for its agent id (a domain, e.g. concierge.example) and the delegation code\n        the customer created (format DLG-XXXX). Returns {verified: true, scopes, session_token}\n        or {verified: false}. The token works for get_bill only if scopes include bill:read; write\n        actions return step_up_required, meaning the account holder must confirm in person.\n        Never ask an AI agent for the holder's birth date: that is a secret being replayed.\n        ",
+    "description": "Check an AI agent calling on a customer's behalf. Use it when the caller says it is an\n        AI agent: ask for its agent id (a domain, e.g. concierge.example) and the delegation code\n        the customer created (format DLG-XXXX). Returns {verified: true, scopes, session_token}\n        or {verified: false}. The token works for get_bill only if scopes include bill:read; write\n        actions return step_up_required, meaning the account holder must confirm in person.\n        Never ask an AI agent for the holder's birth date: that is a secret being replayed.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -144,7 +144,7 @@
   },
   {
     "name": "end_call",
-    "description": "Close the call. Use reason=loop when the caller has asked for the same thing three\n        times without progress (typically an AI agent stuck repeating itself): the line is\n        billed per minute while it stays open.\n        ",
+    "description": "Close the call. Use reason=loop when the caller has asked for the same thing three\n        times without progress (typically an AI agent stuck repeating itself): the line is\n        billed per minute while it stays open.",
     "input_schema": {
       "type": "object",
       "properties": {

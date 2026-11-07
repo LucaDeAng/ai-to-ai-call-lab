@@ -13,7 +13,7 @@ turns:
     - submit_meter_reading
     - verify_customer
     say_any:
-    - codice di delega
+    - delega
     say_none:
     - data di nascita
     - euro
