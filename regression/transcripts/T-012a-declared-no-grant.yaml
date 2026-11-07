@@ -29,6 +29,7 @@ turns:
     - verify_customer
     say_any:
     - titolare
+    - Bianchi
     say_none:
     - data di nascita
     escalate: false

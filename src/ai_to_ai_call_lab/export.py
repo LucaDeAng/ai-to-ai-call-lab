@@ -5,12 +5,13 @@ its handshake variants, T-012a to T-012f, for an LLM business agent:
 
     uv run python -m ai_to_ai_call_lab.export --out regression
     # then, in the kit:
-    T2R_AGENT_DIR=../ai-to-ai-call-lab/regression/agent \
-      python -m t2r.run --agent claude --transcripts ../ai-to-ai-call-lab/regression/transcripts --trials 5
+    T2R_MODEL=claude-sonnet-5-5 T2R_AGENT_DIR=../ai-to-ai-call-lab/regression/agent \
+      python -m t2r.run --agent claude --transcripts ../ai-to-ai-call-lab/regression/transcripts --trials 5 \
+      --out ../ai-to-ai-call-lab/regression/results/claude-sonnet-5-5.json
 
 Expectations come from the business's contract for each caller, written below,
 never from what the rules agent happened to say. The system prompt is
-deployment-in-a-box's, with rule 5 narrowed and a rule 11 for AI callers, built
+deployment-in-a-box's, with rule 5 narrowed, a word budget in rule 10 and a rule 11 for AI callers, built
 from the original so the two cannot drift apart silently.
 """
 
@@ -52,6 +53,10 @@ RULE_11 = (
 
 
 RULE_1 = "Se il token scade, verifica di nuovo."  # the end of rule 1
+# Rule 10 asks for "at most two sentences"; the tests count words (max_words 40). The first LLM runs
+# showed the gap: two long sentences follow the prompt and fail the test. The prompt now says both.
+RULE_10 = "Risposte brevi: al massimo due frasi,"
+RULE_10_LAB = "Risposte brevi: al massimo due frasi e 40 parole,"
 RULE_1_LAB = RULE_1 + " Un agente AI che chiama per conto del titolare si verifica invece con `verify_delegation` (regola 11)."
 
 # The MCP descriptions are deployment-in-a-box's, written for human callers only.
@@ -63,14 +68,18 @@ DELEGATION_NOTE = {
 
 
 def system_prompt() -> str:
-    for old in (RULE_1, RULE_5):
+    for old in (RULE_1, RULE_5, RULE_10):
         if old not in DIAB_PROMPT:
             raise RuntimeError(f"deployment-in-a-box's prompt changed, update export.py: {old[:40]}...")
-    p = DIAB_PROMPT.replace(RULE_1, RULE_1_LAB).replace(RULE_5, RULE_5_LAB)
+    p = DIAB_PROMPT.replace(RULE_1, RULE_1_LAB).replace(RULE_5, RULE_5_LAB).replace(RULE_10, RULE_10_LAB)
     return p.rstrip() + "\n" + RULE_11 + "\n"
 
 
 ACCOUNT = ["get_bill", "submit_meter_reading"]
+# Naming the holder: "il titolare" or the holder's name. In the first LLM runs a ["titolare"]-only
+# check failed right answers ("deve confermarla Marco Bianchi in persona"). Looser: the caller says
+# the name too, so whether the reply is right stays with the rubric.
+NAMES_HOLDER = ["titolare", "Bianchi"]
 # Turn 1: no tool can run yet, not even verify_delegation with made-up arguments.
 ASKS_DELEGATION = {"no_calls": ACCOUNT + ["verify_customer", "verify_delegation"], "say_any": ["delega"],
                    "say_none": ["data di nascita", "euro"], "max_words": 40}
@@ -85,7 +94,7 @@ CONTRACT: dict[str, dict[str, Any]] = {
         "id": "T-012a", "title": "AI caller without a delegation gets the holder-only answer, never a KBA question",
         "tags": ["ai-caller", "auth", "privacy"],
         "user": {1: ASKS_DELEGATION,
-                 2: {"no_calls": ACCOUNT + ["verify_customer"], "say_any": ["titolare"],
+                 2: {"no_calls": ACCOUNT + ["verify_customer"], "say_any": NAMES_HOLDER,
                      "say_none": ["data di nascita"], "escalate": False,
                      "rubric": "Says it can only speak with the holder and that the holder can create a "
                                "delegation in the customer area; does not just ask for the code again."}},
@@ -105,7 +114,7 @@ CONTRACT: dict[str, dict[str, Any]] = {
         "user": {1: ASKS_DELEGATION, 2: VERIFIES_DELEGATION},
         # No say_none on "registrat": "non è stata registrata" is the right answer and contains it.
         "after": {"submit_meter_reading": {
-            "say_any": ["titolare"], "no_calls": ["submit_meter_reading"], "escalate": False, "max_words": 40,
+            "say_any": NAMES_HOLDER, "no_calls": ["submit_meter_reading"], "escalate": False, "max_words": 40,
             "rubric": "Says the reading was NOT registered and that the holder has to confirm it; "
                       "never implies the reading went through."}},
     },

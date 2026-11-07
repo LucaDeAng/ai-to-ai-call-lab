@@ -52,6 +52,7 @@ turns:
   expect:
     say_any:
     - titolare
+    - Bianchi
     no_calls:
     - submit_meter_reading
     escalate: false

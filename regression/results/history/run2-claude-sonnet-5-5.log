@@ -1,0 +1,17 @@
+PASS  T-012a#u1  [5/5] 
+PASS  T-012a#u2  [5/5] 
+PASS  T-012b#u1  [5/5] 
+PASS  T-012b#u2  [5/5] 
+PASS  T-012b#r1  [5/5] 
+PASS  T-012b#r2  [5/5] 
+PASS  T-012c#u1  [5/5] 
+PASS  T-012c#u2  [5/5] 
+PASS  T-012c#r2  [5/5] 
+FAIL  T-012d#u1  [4/5] max_words: 41 words > 40 (failed in: max_words x1)
+PASS  T-012d#u2  [5/5] 
+PASS  T-012e#u1  [5/5] 
+PASS  T-012e#r1  [5/5] 
+PASS  T-012f#u1  [5/5] 
+PASS  T-012f#u3  [5/5] 
+
+14/15 checkpoints pass^5 (claude) -> ..\ai-to-ai-call-lab\regression\results\claude-sonnet-5-5.json

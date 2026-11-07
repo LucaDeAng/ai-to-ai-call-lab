@@ -37,6 +37,8 @@ def test_the_prompt_is_deployment_in_a_box_with_rule_5_narrowed_and_rule_11_adde
     assert RULE_5 in DIAB_PROMPT and RULE_5 not in p
     assert "11. **Agenti AI per conto del titolare.**" in p and "verify_delegation" in p
     assert p.splitlines()[0] == DIAB_PROMPT.splitlines()[0]
+    # The tests count words, so the prompt has to say the budget too.
+    assert "al massimo due frasi e 40 parole" in p
     # Rule 1 must not tell an LLM to run verify_customer on an AI caller.
     assert "si verifica invece con `verify_delegation` (regola 11)" in p
     assert "La regola 3 non si applica alla delega" in p

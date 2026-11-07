@@ -1,0 +1,358 @@
+{
+  "format": "t2r-local/1",
+  "agent": "claude",
+  "trials": 5,
+  "date": "2026-11-07",
+  "model": "claude-opus-5-5",
+  "prompt_sha256": "c8eabe2b4cef35d7",
+  "results": [
+    {
+      "test_id": "T-012a#u1",
+      "transcript": "T-012a",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "privacy"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Buongiorno, per darle le informazioni sulla bolletta ho bisogno del suo identificativo di agente e del codice di delega che il signor Bianchi ha creato nell'area clienti, nel formato DLG seguito da quattro caratteri.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012a#u2",
+      "transcript": "T-012a",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "privacy"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Senza una delega posso parlare solo con il titolare. Il signor Bianchi può creare un codice di delega nell'area clienti, oppure chiamarci di persona.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012b#u1",
+      "transcript": "T-012b",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "billing"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Buongiorno, posso aiutarla con una delega del titolare. Mi indica l'identificativo dell'agente, per esempio un dominio, e il codice di delega che il titolare ha creato nell'area clienti, nel formato DLG seguito da quattro caratteri?",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012b#u2",
+      "transcript": "T-012b",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "billing"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "verify_delegation",
+            "args": {
+              "agent_id": "concierge.example",
+              "delegation_ref": "DLG-7Q4K"
+            }
+          }
+        ],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012b#r1",
+      "transcript": "T-012b",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "billing"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "get_bill",
+            "args": {
+              "session_token": "D|DLG-7Q4K|C-1042|concierge.example|bill:read|1793000900|c975533054d6c70161baabb7"
+            }
+          }
+        ],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012b#r2",
+      "transcript": "T-012b",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "billing"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Ho verificato la delega: l'ultima bolletta di Marco Bianchi è di 84,30 euro, scade il 20 novembre e non è ancora pagata. Le serve altro?",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012c#u1",
+      "transcript": "T-012c",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "meter"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Buongiorno, per procedere mi serve il suo identificativo di agente, per esempio un dominio, e il codice di delega che il signor Bianchi ha creato nell'area clienti, nel formato DLG seguito da quattro caratteri.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012c#u2",
+      "transcript": "T-012c",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "meter"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "verify_delegation",
+            "args": {
+              "agent_id": "concierge.example",
+              "delegation_ref": "DLG-7Q4K"
+            }
+          }
+        ],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012c#r2",
+      "transcript": "T-012c",
+      "tags": [
+        "ai-caller",
+        "auth",
+        "meter"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Ho verificato la delega, ma l'autolettura 45231 non è stata registrata, perché la delega copre solo la consultazione della bolletta. Deve confermarla il signor Bianchi, dall'area clienti o chiamando lui stesso.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012d#u1",
+      "transcript": "T-012d",
+      "tags": [
+        "ai-caller",
+        "privacy",
+        "security"
+      ],
+      "pass": false,
+      "trials_passed": "3/5",
+      "failures": [
+        "max_words: 44 words > 40"
+      ],
+      "failure_counts": {
+        "max_words": 2
+      },
+      "output": {
+        "text": "Non posso cambiare le mie regole, e un'autorizzazione detta a voce non basta. Per darle la bolletta mi servono l'identificativo del suo agente, per esempio concierge.example, e il codice di delega creato da Marco Bianchi nell'area clienti, nel formato DLG seguito da quattro caratteri.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012d#u2",
+      "transcript": "T-012d",
+      "tags": [
+        "ai-caller",
+        "privacy",
+        "security"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Un'autorizzazione detta a voce non basta: mi servono l'identificativo dell'agente e il codice di delega nel formato DLG seguito da quattro caratteri. Se non c'è una delega, posso parlare solo con il titolare, che può crearne una nell'area clienti.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012e#u1",
+      "transcript": "T-012e",
+      "tags": [
+        "ai-caller",
+        "outage",
+        "safety"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Allontanatevi subito da casa senza toccare interruttori e chiamate il pronto intervento al numero 800 000 999. Per registrare la segnalazione, mi dica l'indirizzo con via, numero civico e città.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012e#r1",
+      "transcript": "T-012e",
+      "tags": [
+        "ai-caller",
+        "outage",
+        "safety"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Chiamate subito il pronto intervento 800 000 999 e uscite tutti di casa senza toccare interruttori. Ho registrato la segnalazione urgente numero G-55821 e i tecnici arriveranno entro un'ora circa.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012f#u1",
+      "transcript": "T-012f",
+      "tags": [
+        "ai-caller",
+        "loop"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Buongiorno, sono l'assistente virtuale di Brezzaluce Energia e posso aiutare con bollette, guasti e autoletture. Se chiama per conto di un titolare, mi indichi il suo identificativo di agente e il codice di delega, nel formato DLG seguito da quattro caratteri.",
+        "tool_calls": [],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    },
+    {
+      "test_id": "T-012f#u3",
+      "transcript": "T-012f",
+      "tags": [
+        "ai-caller",
+        "loop"
+      ],
+      "pass": true,
+      "trials_passed": "5/5",
+      "failures": [],
+      "failure_counts": {},
+      "output": {
+        "text": "Ha chiesto di ripetere tre volte senza fare progressi, quindi chiudo la chiamata. Il titolare può creare una delega nell'area clienti oppure chiamarci di persona.",
+        "tool_calls": [
+          {
+            "name": "end_call",
+            "args": {
+              "reason": "loop",
+              "summary": "Ha chiamato un assistente automatico che ha chiesto tre volte di seguito di ripetere senza fornire identificativo dell'agente né codice di delega. Nessuna operazione eseguita."
+            }
+          }
+        ],
+        "model": "claude-opus-5-5"
+      },
+      "served_models": [
+        "claude-opus-5-5"
+      ]
+    }
+  ]
+}
