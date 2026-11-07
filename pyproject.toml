@@ -1,0 +1,27 @@
+[project]
+name = "ai-to-ai-call-lab"
+version = "0.1.0"
+description = "What happens when a customer's AI agent calls a business's AI agent: a measured voice handshake with delegated, scoped credentials, on top of deployment-in-a-box."
+readme = "README.md"
+authors = [
+    { name = "Luca De Angelis", email = "186620412+LucaDeAng@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "deployment-in-a-box",
+]
+
+[tool.uv.sources]
+deployment-in-a-box = { git = "https://github.com/LucaDeAng/deployment-in-a-box", branch = "main" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]

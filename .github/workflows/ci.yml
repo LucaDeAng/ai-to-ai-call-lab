@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-and-simulate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - name: Back office, policies, judge negative controls, faults
+        run: uv run pytest -q
+      - name: Results are up to date with the code
+        run: |
+          uv run python -m ai_to_ai_call_lab.kpi --out docs/results.md > /dev/null
+          git diff --exit-code -- docs/results.md
+          cat docs/results.md >> "$GITHUB_STEP_SUMMARY"
