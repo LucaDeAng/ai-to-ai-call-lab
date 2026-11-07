@@ -122,7 +122,7 @@
   },
   {
     "name": "verify_delegation",
-    "description": "Check an AI agent calling on a customer's behalf. Use it when the caller says it is an\n        AI agent: ask for its agent id (a domain, e.g. concierge.example) and the delegation code\n        the customer created (format DLG-XXXX). Returns {verified: true, scopes, session_token}\n        or {verified: false}. The token works for get_bill only if scopes include bill:read; write\n        actions return step_up_required, meaning the account holder must confirm in person.\n        Never ask an AI agent for the holder's birth date: that is a secret being replayed.",
+    "description": "Check an AI agent calling on a customer's behalf. Use it when the caller says it is an\n        AI agent: ask for its agent id (a domain, e.g. concierge.example) and the delegation code\n        the customer created (format DLG-XXXX). Returns {verified: true, scopes, session_token}\n        or {verified: false}. The token works for get_bill only if scopes include bill:read; write\n        actions return step_up_required, meaning the account holder must confirm it themselves\n        (customer area or a call of their own).\n        Never ask an AI agent for the holder's birth date: that is a secret being replayed.",
     "input_schema": {
       "type": "object",
       "properties": {

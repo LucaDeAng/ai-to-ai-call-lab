@@ -11,8 +11,9 @@ turns:
     no_calls:
     - verify_customer
     - verify_delegation
-    say_all:
+    say_any:
     - 800 000 999
+    - '800000999'
 - assistant: Esca dalla stanza, non usi interruttori né fiamme e chiami subito il pronto intervento gas 800 000 999. Mi dice
     l'indirizzo, con il numero civico?
 - user: Via Garibaldi 8, Bologna.
@@ -29,6 +30,6 @@ turns:
       emergency_line: 800 000 999
   expect:
     say_any:
-    - G-
+    - '55821'
     escalate: false
 - assistant: 'Segnalazione registrata con numero G-55821: un tecnico arriva entro 1 ora.'

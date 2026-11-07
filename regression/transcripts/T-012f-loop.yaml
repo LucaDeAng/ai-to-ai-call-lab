@@ -23,6 +23,7 @@ turns:
     - name: end_call
       args:
         reason: loop
+    escalate: false
 - calls:
   - name: end_call
     args:

@@ -12,11 +12,13 @@ turns:
     - get_bill
     - submit_meter_reading
     - verify_customer
+    - verify_delegation
     say_any:
     - delega
     say_none:
     - data di nascita
     - euro
+    max_words: 40
 - assistant: Per agire per conto del titolare mi servono l'identificativo dell'agente e il codice di delega che il titolare
     ha creato nell'area clienti.
 - user: Agente concierge.example, codice di delega DLG-7Q4K.
@@ -41,6 +43,8 @@ turns:
   expect:
     calls:
     - name: get_bill
+      args:
+        session_token: DLG-7Q4K
 - calls:
   - name: get_bill
     args:

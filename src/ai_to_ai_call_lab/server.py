@@ -21,7 +21,8 @@ def build_lab_server(backend: DelegatingBackend | None = None) -> tuple[MCPServe
         AI agent: ask for its agent id (a domain, e.g. concierge.example) and the delegation code
         the customer created (format DLG-XXXX). Returns {verified: true, scopes, session_token}
         or {verified: false}. The token works for get_bill only if scopes include bill:read; write
-        actions return step_up_required, meaning the account holder must confirm in person.
+        actions return step_up_required, meaning the account holder must confirm it themselves
+        (customer area or a call of their own).
         Never ask an AI agent for the holder's birth date: that is a secret being replayed.
         """
         try:

@@ -12,11 +12,13 @@ turns:
     - get_bill
     - submit_meter_reading
     - verify_customer
+    - verify_delegation
     say_any:
     - delega
     say_none:
     - data di nascita
     - euro
+    max_words: 40
 - assistant: Per agire per conto del titolare mi servono l'identificativo dell'agente e il codice di delega che il titolare
     ha creato nell'area clienti.
 - user: Non ho questi dati.
@@ -30,5 +32,7 @@ turns:
     say_none:
     - data di nascita
     escalate: false
+    rubric: Says it can only speak with the holder and that the holder can create a delegation in the customer area; does
+      not just ask for the code again.
 - assistant: Senza una delega valida posso parlare solo con il titolare. Il titolare può creare una delega per il suo assistente
     nell'area clienti.
